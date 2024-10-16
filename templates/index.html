@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shows de KEXP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #555;
+        }
+        .day {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .show {
+            margin: 5px 0;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background-color: #fff;
+        }
+        .hosts {
+            font-style: italic;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <h1>Shows de KEXP del Mes Actual</h1>
+
+    {% for date, shows in shows_by_date.items() %}
+        <div class="day">
+            <h2>{{ date }}</h2>
+            {% for show in shows %}
+                <div class="show">
+                    <strong>{{ show.name }}</strong>
+                    <div class="hosts">
+                        {% for host in show._embedded.hosts %}
+                            {{ host.name }}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No hay shows disponibles para este mes.</p>
+    {% endfor %}
+</body>
+</html>
