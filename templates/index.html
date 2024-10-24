@@ -1,37 +1,33 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shows de KEXP</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-    <div class="container mt-4">
-        <h1 class="text-center">Shows de KEXP - {{ formatted_date }}</h1>
+<div class="container mt-4">
+    <h1 class="text-center">Shows de KEXP</h1>
 
-        <div class="row">
-            {% for show in shows %}
-                <div class="col-md-4">
-                    <div class="card mb-4">
-                        <img class="card-img-top" src="{{ show.image_uri }}" alt="Imagen del programa">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ show.program_name }}</h5>
-                            <p class="card-text">
-                                <strong>Host:</strong> {{ show.host_name }}<br>
-                                <strong>Inicio:</strong> {{ show.start_time }}<br>
-                                <strong>Tags:</strong> {{ show.tags }}
-                            </p>
+    {% for week, shows in shows_by_week.items() %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="text-center">
+                    Semana del {{ week[0] }} al {{ week[1] }}
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for show in shows %}
+                        <div class="col-md-2">
+                            <div class="card mb-4">
+                                <img class="card-img-top" src="{{ show.image_uri }}" alt="Imagen del programa" style="height: 150px; object-fit: cover;">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ show.program_name }}</h5>
+                                    <p class="card-text">
+                                        <strong>Host:</strong> {{ show.host_name }}<br>
+                                        <strong>Inicio:</strong> {{ show.start_time }}<br>
+                                        <strong>Tags:</strong> {{ show.tags }}
+                                    </p>
+                                    <a href="{{ show.download_link }}" class="btn btn-primary">Descargar MP3</a>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    {% endfor %}
                 </div>
-            {% else %}
-                <p>No hay shows disponibles para esta fecha.</p>
-            {% endfor %}
+            </div>
         </div>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    {% endfor %}
+</div>

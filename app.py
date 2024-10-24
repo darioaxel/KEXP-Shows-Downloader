@@ -1,62 +1,64 @@
 from flask import Flask, render_template
 import requests
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    # Definimos la fecha para la que queremos obtener los shows (15 de octubre en tu caso)
-    target_date = datetime(2024, 10, 15)
-    shows = get_shows_by_date(target_date)
+    start_date = datetime(2024, 10, 1)
+    shows_by_week = get_shows_by_weeks(start_date)
+    return render_template('index.html', shows_by_week=shows_by_week)
 
-    # Convertimos la fecha a una cadena para el uso en el template
-    formatted_date = target_date.date().strftime('%Y-%m-%d')
-
-    # Renderizamos el template y pasamos los shows filtrados
-    return render_template('index.html', shows=shows, formatted_date=formatted_date)
-
-def get_shows_by_date(date):
-    # Usamos el día anterior para el start_time_after
-    day_before = date - timedelta(days=1)
+def get_shows_by_weeks(start_date):
+    day_before = start_date - timedelta(days=1)
     start_time = day_before.strftime('%Y-%m-%dT00:00:00.000Z')
-    
-    # Llamada a la API para obtener los shows
-    url = f'https://api.kexp.org/v2/shows/?expand=hosts&start_time_after={start_time}&limit=1050'
+
+    url = f'https://api.kexp.org/v2/shows/?expand=hosts&start_time_after={start_time}&limit=50'
     print(f'Llamando a la API: {url}')
     
     response = requests.get(url)
 
     if response.status_code == 200:
         json_response = response.json()
-
-        # Imprimimos el JSON completo para depuración
         print("Respuesta completa de la API:")
-        print(json_response['results'])
-        print('START TIME')
-        print(start_time)
-        print(date)
-        # Filtramos los shows que coinciden con la fecha deseada
-        shows_filtered = []
+        print(json_response)
+
+        shows_by_week = defaultdict(list)
+
         if 'results' in json_response:
             for show in json_response['results']:
                 show_start_time = datetime.strptime(show['start_time'], '%Y-%m-%dT%H:%M:%S%z')
-                print(show_start_time)
-                # Si el show es del día deseado (15 de octubre en este caso)
-                if show_start_time.date() == date.date():
-                    print(f"Show encontrado para {date.date()}: {show['program_name']} - {show['host_names'][0] if show['host_names'] else 'Desconocido'}")
-                    shows_filtered.append({
-                        'program_name': show['program_name'],
-                        'host_name': show['host_names'][0] if show['host_names'] else 'Desconocido',
-                        'start_time': show_start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                        'tags': show['program_tags'] if show['program_tags'] else 'Sin tags',
-                        'image_uri': show['image_uri']
-                    })
+                week_start = show_start_time - timedelta(days=show_start_time.weekday())
+                week_end = week_start + timedelta(days=6)
+                week_range = (week_start.date(), week_end.date())
 
-        return shows_filtered
+                download_link = generate_mp3_download_link(show)
+
+                shows_by_week[week_range].append({
+                    'program_name': show['program_name'],
+                    'host_name': show['host_names'][0] if show['host_names'] else 'Desconocido',
+                    'start_time': show_start_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'tags': show['program_tags'] if show['program_tags'] else 'Sin tags',
+                    'image_uri': show['image_uri'],
+                    'download_link': download_link
+                })
+
+        return shows_by_week
     else:
         print(f"Error al llamar a la API: {response.status_code}")
-        return []
+        return {}
+
+def generate_mp3_download_link(show):
+    start_time = datetime.strptime(show['start_time'], '%Y-%m-%dT%H:%M:%S%z')
+    date_str = start_time.strftime('%Y%m%d%H%M%S')
+    program_name_slug = show['program_name'].lower().replace(" ", "-")
+    download_link = (
+        f"https://kexp-archive.streamguys1.com/content/kexp/{date_str}-4-485-{program_name_slug}.mp3?"
+        "listeningSessionID=0CD_382_78__ef17e74236afc239e88f1de6cdaade26743a3ea6"
+    )
+    return download_link
 
 if __name__ == '__main__':
     app.run(debug=True)
