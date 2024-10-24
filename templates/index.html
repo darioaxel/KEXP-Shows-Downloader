@@ -1,33 +1,45 @@
-<div class="container mt-4">
-    <h1 class="text-center">Shows de KEXP</h1>
-
-    {% for week, shows in shows_by_week.items() %}
-        <div class="card mb-4">
-            <div class="card-header">
-                <h2 class="text-center">
-                    Semana del {{ week[0] }} al {{ week[1] }}
-                </h2>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    {% for show in shows %}
-                        <div class="col-md-2">
-                            <div class="card mb-4">
-                                <img class="card-img-top" src="{{ show.image_uri }}" alt="Imagen del programa" style="height: 150px; object-fit: cover;">
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ show.program_name }}</h5>
-                                    <p class="card-text">
-                                        <strong>Host:</strong> {{ show.host_name }}<br>
-                                        <strong>Inicio:</strong> {{ show.start_time }}<br>
-                                        <strong>Tags:</strong> {{ show.tags }}
-                                    </p>
-                                    <a href="{{ show.download_link }}" class="btn btn-primary">Descargar MP3</a>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEXP Shows</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <style>
+        .card-img-top {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        .card-columns {
+            column-count: 6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">KEXP Shows</h1>
+        {% for date, shows in shows_by_date.items() %}
+        <div class="mb-5">
+            <h2>{{ date }}</h2>
+            <div class="card-columns">
+                {% for show in shows %}
+                <div class="card">
+                    <img class="card-img-top" src="{{ show['hosts'][0]['image_uri'] }}" alt="Host image">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ show['program_name'] }}</h5>
+                        <p class="card-text">
+                            Host: {{ show['hosts'][0]['name'] }}<br>
+                            Tags: {{ show['program_tags'] }}<br>
+                            Hora de Inicio: {{ show['start_time'] }}
+                        </p>
+                        <a href="/download_mp3/{{ show['id'] }}" class="btn btn-primary">Descargar MP3</a>
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
-    {% endfor %}
-</div>
+        {% endfor %}
+    </div>
+</body>
+</html>
