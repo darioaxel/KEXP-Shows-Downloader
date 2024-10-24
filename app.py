@@ -6,49 +6,57 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    shows_by_date = get_shows_for_current_month()
-    return render_template('index.html', shows_by_date=shows_by_date)
+    # Definimos la fecha para la que queremos obtener los shows (15 de octubre en tu caso)
+    target_date = datetime(2024, 10, 15)
+    shows = get_shows_by_date(target_date)
 
-def get_shows_for_current_month():
-    # Obtener el mes actual y el año
-    now = datetime.now()
-    month = now.month
-    year = now.year
+    # Convertimos la fecha a una cadena para el uso en el template
+    formatted_date = target_date.date().strftime('%Y-%m-%d')
 
-    # Calcular el primer y último día del mes
-    first_day = datetime(year, month, 1)
-    if month == 12:  # Si es diciembre, el próximo mes es enero del siguiente año
-        last_day = datetime(year + 1, 1, 1) - timedelta(days=1)
-    else:
-        last_day = datetime(year, month + 1, 1) - timedelta(days=1)
-
-    shows_by_date = {}
-
-    # Iterar por cada día del mes
-    current_day = first_day
-    while current_day <= last_day:
-        shows = get_shows_by_date(current_day)
-        if shows:
-            shows_by_date[current_day.date()] = shows
-        current_day += timedelta(days=1)
-
-    return shows_by_date
+    # Renderizamos el template y pasamos los shows filtrados
+    return render_template('index.html', shows=shows, formatted_date=formatted_date)
 
 def get_shows_by_date(date):
-    # Convertir la fecha a un formato adecuado para la API
-    date_str = date.strftime('%Y-%m-%dT10:00:00.000Z')  # Formato ISO 8601
-    url = f'https://api.kexp.org/v2/shows/?expand=hosts&start_time_after={date_str}&limit=200'
+    # Usamos el día anterior para el start_time_after
+    day_before = date - timedelta(days=1)
+    start_time = day_before.strftime('%Y-%m-%dT00:00:00.000Z')
     
-    # Imprimir la URL de la API en la consola
+    # Llamada a la API para obtener los shows
+    url = f'https://api.kexp.org/v2/shows/?expand=hosts&start_time_after={start_time}&limit=1050'
     print(f'Llamando a la API: {url}')
-
+    
     response = requests.get(url)
 
     if response.status_code == 200:
         json_response = response.json()
-        if '_embedded' in json_response:
-            return json_response['_embedded']['shows']
-    return []
+
+        # Imprimimos el JSON completo para depuración
+        print("Respuesta completa de la API:")
+        print(json_response['results'])
+        print('START TIME')
+        print(start_time)
+        print(date)
+        # Filtramos los shows que coinciden con la fecha deseada
+        shows_filtered = []
+        if 'results' in json_response:
+            for show in json_response['results']:
+                show_start_time = datetime.strptime(show['start_time'], '%Y-%m-%dT%H:%M:%S%z')
+                print(show_start_time)
+                # Si el show es del día deseado (15 de octubre en este caso)
+                if show_start_time.date() == date.date():
+                    print(f"Show encontrado para {date.date()}: {show['program_name']} - {show['host_names'][0] if show['host_names'] else 'Desconocido'}")
+                    shows_filtered.append({
+                        'program_name': show['program_name'],
+                        'host_name': show['host_names'][0] if show['host_names'] else 'Desconocido',
+                        'start_time': show_start_time.strftime('%Y-%m-%d %H:%M:%S'),
+                        'tags': show['program_tags'] if show['program_tags'] else 'Sin tags',
+                        'image_uri': show['image_uri']
+                    })
+
+        return shows_filtered
+    else:
+        print(f"Error al llamar a la API: {response.status_code}")
+        return []
 
 if __name__ == '__main__':
     app.run(debug=True)
