@@ -2,44 +2,107 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KEXP Shows</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
-    <style>
-        .card-img-top {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-        }
-        .card-columns {
-            column-count: 6;
-        }
-    </style>
+    <title>Programas KEXP</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/js/bootstrap-datepicker.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/css/bootstrap-datepicker.min.css">
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">KEXP Shows</h1>
-        {% for date, shows in shows_by_date.items() %}
-        <div class="mb-5">
-            <h2>{{ date }}</h2>
-            <div class="card-columns">
-                {% for show in shows %}
-                <div class="card">
-                    <img class="card-img-top" src="{{ show['hosts'][0]['image_uri'] }}" alt="Host image">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ show['program_name'] }}</h5>
-                        <p class="card-text">
-                            Host: {{ show['hosts'][0]['name'] }}<br>
-                            Tags: {{ show['program_tags'] }}<br>
-                            Hora de Inicio: {{ show['start_time'] }}
-                        </p>
-                        <a href="/download_mp3/{{ show['id'] }}" class="btn btn-primary">Descargar MP3</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
+<div class="container mt-5">
+    <h1>Selecciona el Rango de Fechas</h1>
+    
+    <!-- Selector de rango y fecha -->
+    <div class="form-group">
+        <label for="selection_type">Tipo de selección:</label>
+        <select id="selection_type" class="form-control">
+            <option value="day">Día</option>
+            <option value="week">Semana</option>
+            <option value="month">Mes</option>
+        </select>
     </div>
+    
+    <div class="form-group">
+        <label for="date_picker">Fecha:</label>
+        <input type="text" id="date_picker" class="form-control" placeholder="Selecciona la fecha">
+    </div>
+    
+    <button id="fetch_shows" class="btn btn-primary">Mostrar Programas</button>
+    
+    <!-- Listado de programas -->
+    <div id="programs" class="mt-4 row"></div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('#date_picker').datepicker({
+            format: "yyyy-mm-dd",
+            autoclose: true
+        });
+
+        $('#fetch_shows').on('click', function () {
+            const selectionType = $('#selection_type').val();
+            const selectedDate = $('#date_picker').val();
+            
+            if (!selectedDate) {
+                alert("Por favor, selecciona una fecha.");
+                return;
+            }
+
+            $.ajax({
+                url: '/get_shows',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    selection_type: selectionType,
+                    selected_date: selectedDate
+                }),
+                success: function (data) {
+                    $('#programs').empty();
+                    data.forEach(show => {
+                        const showCard = `
+                            <div class="col-md-2 mb-4">
+                                <div class="card">
+                                    <img src="${show.hosts[0].image_uri}" class="card-img-top" style="height: 100px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${show.program_name}</h5>
+                                        <p class="card-text"><strong>Host:</strong> ${show.host_names[0]}</p>
+                                        <p class="card-text"><strong>Tags:</strong> ${show.program_tags || 'N/A'}</p>
+                                        <p class="card-text"><strong>Inicio:</strong> ${show.start_time}</p>
+                                        <a href="#" class="btn btn-primary download-btn" data-show-id="${show.id}">Descargar MP3</a>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        $('#programs').append(showCard);
+                    });
+                },
+                error: function () {
+                    alert("Error al obtener los programas.");
+                }
+            });
+        });
+
+        $(document).on('click', '.download-btn', function (e) {
+            e.preventDefault();
+            const showId = $(this).data('show-id');
+            
+            $.ajax({
+                url: `/download_link/${showId}`,
+                type: 'GET',
+                success: function (data) {
+                    if (data.download_url) {
+                        window.location.href = data.download_url;
+                    } else {
+                        alert("No se pudo obtener la URL de descarga.");
+                    }
+                },
+                error: function () {
+                    alert("Error al obtener la URL de descarga.");
+                }
+            });
+        });
+    });
+</script>
 </body>
 </html>

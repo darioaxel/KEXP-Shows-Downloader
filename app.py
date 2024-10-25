@@ -1,90 +1,77 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, jsonify, render_template, request
 import requests
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-KEXP_MAIN_URL = "https://www.kexp.org/"
-KEXP_DOWNLOAD_BASE_URL = "https://kexp-archive.streamguys1.com/content/kexp/"
-LIMIT_SHOWS = 550
+KEXP_SHOWS_API_URL = "https://api.kexp.org/v2/shows/"
+KEXP_STREAM_URL_API = "https://api.kexp.org/get_streaming_url/"
 
-# Este es el endpoint para listar los shows por día
 @app.route('/')
 def index():
-    today = datetime.today()
-    start_date = today - timedelta(days=1)  # Start fetching shows from yesterday
-    shows_by_date = get_shows_by_date(start_date)
+    """Renderiza la página principal con la interfaz de selección de rango de fechas."""
+    return render_template("index.html")
 
-    return render_template('index.html', shows_by_date=shows_by_date)
-
-# Función para obtener los shows desde el API
-def get_shows_by_date(start_date):
-    date_str = start_date.strftime('%Y-%m-%dT00:00:00.000Z')
-    api_url = f"https://api.kexp.org/v2/shows/?expand=hosts&start_time_after={date_str}&limit={LIMIT_SHOWS}"
+@app.route('/get_shows', methods=['POST'])
+def get_shows():
+    """Devuelve los programas en función de la fecha seleccionada y el límite configurado."""
+    selection_type = request.json.get('selection_type')
+    selected_date = request.json.get('selected_date')
     
-    # Mostrar la llamada al API en consola
-    print(f"API call: {api_url}")
+    if not selection_type or not selected_date:
+        return jsonify({"error": "Falta el tipo de selección o la fecha."}), 400
 
-    response = requests.get(api_url)
-    shows_data = response.json()
-
-    shows_by_date = {}
-
-    # Agrupar shows por fecha
-    for show in shows_data['results']:
-        start_time = show['start_time']
-        show_date = datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S%z').date()
-        if show_date not in shows_by_date:
-            shows_by_date[show_date] = []
-        
-        # Añadir el show al día correspondiente
-        shows_by_date[show_date].append(show)
-
-    return shows_by_date
-
-# Endpoint para descargar un MP3 de un show
-@app.route('/download_mp3/<show_id>', methods=['GET'])
-def download_mp3(show_id):
-    session = requests.Session()
-
-    # Hacer la solicitud para obtener la cookie de sesión
-    response = session.get(KEXP_MAIN_URL)
+    date_obj = datetime.strptime(selected_date, '%Y-%m-%d')
     
-    # Obtener todas las cookies recibidas en la respuesta
-    cookies = session.cookies.get_dict()
-    print(f"Cookies recibidas: {cookies}")  # Esto mostrará todas las cookies en la consola
-
-    # Verificar si se ha recibido la cookie 'AISSessionId'
-    if 'AISSessionId' not in cookies:
-        return jsonify({"error": "No se pudo obtener la cookie de sesión"}), 400
-    
-    session_id = cookies.get('AISSessionId')
-
-    # Generar la URL de descarga del archivo MP3
-    mp3_filename = f"{show_id}.mp3"  # Se debe construir el nombre del archivo MP3 con el show_id
-    mp3_download_url = f"{KEXP_DOWNLOAD_BASE_URL}{mp3_filename}?listeningSessionID={session_id}"
-
-    # Agregar las cabeceras necesarias para la descarga
-    headers = {
-        'Accept': '*/*',
-        'Accept-Language': 'es-ES,es;q=0.9,de;q=0.8,en;q=0.7',
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)',
-        'Referer': KEXP_MAIN_URL,
-        'Range': 'bytes=0-'
-    }
-
-    # Hacer la solicitud para descargar el archivo
-    download_response = session.get(mp3_download_url, headers=headers, stream=True)
-    
-    if download_response.status_code == 200:
-        # Guardar el archivo temporalmente y luego enviarlo al usuario
-        mp3_path = f"downloads/{mp3_filename}"
-        with open(mp3_path, 'wb') as file:
-            for chunk in download_response.iter_content(chunk_size=1024):
-                file.write(chunk)
-        return send_file(mp3_path, as_attachment=True)
+    # Establecer el rango de fechas y límite en función del tipo de selección
+    if selection_type == 'day':
+        start_date = date_obj
+        end_date = start_date
+        limit = 50
+    elif selection_type == 'week':
+        start_date = date_obj - timedelta(days=date_obj.weekday())
+        end_date = start_date + timedelta(days=6)
+        limit = 150
+    elif selection_type == 'month':
+        start_date = date_obj.replace(day=1)
+        end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+        limit = 550
     else:
-        return jsonify({"error": f"Error en la descarga: {download_response.status_code}"}), 400
+        return jsonify({"error": "Tipo de selección inválido."}), 400
+    
+    params = {
+        "expand": "hosts",
+        "limit": limit,
+        "start_time_after": start_date.isoformat() + "T00:00:00Z",
+        "start_time_before": end_date.isoformat() + "T23:59:59Z"
+    }
+    response = requests.get(KEXP_SHOWS_API_URL, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        return jsonify(data['results'])
+    else:
+        return jsonify({"error": "Error al obtener los programas de KEXP"}), 500
+
+@app.route('/download_link/<show_id>', methods=['GET'])
+def get_download_link(show_id):
+    """Genera la URL de descarga basada en el `start_time` del programa."""
+    response = requests.get(f"{KEXP_SHOWS_API_URL}{show_id}")
+    if response.status_code != 200:
+        return jsonify({"error": "No se pudo obtener la información del show"}), 400
+    
+    show_data = response.json()
+    start_time = show_data.get("start_time")
+    
+    if not start_time:
+        return jsonify({"error": "No se encontró el campo start_time"}), 400
+    
+    download_response = requests.get(f"{KEXP_STREAM_URL_API}?bitrate=256&timestamp={start_time}")
+    if download_response.status_code == 200:
+        data = download_response.json()
+        return jsonify({"download_url": data.get("sg-url")})
+    else:
+        return jsonify({"error": "No se pudo obtener la URL de descarga"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
