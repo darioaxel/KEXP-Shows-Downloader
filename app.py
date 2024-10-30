@@ -12,46 +12,58 @@ def index():
     """Renderiza la página principal con la interfaz de selección de rango de fechas."""
     return render_template("index.html")
 
+# Ruta para obtener los shows
 @app.route('/get_shows', methods=['POST'])
 def get_shows():
-    """Devuelve los programas en función de la fecha seleccionada y el límite configurado."""
-    selection_type = request.json.get('selection_type')
-    selected_date = request.json.get('selected_date')
-    
-    if not selection_type or not selected_date:
-        return jsonify({"error": "Falta el tipo de selección o la fecha."}), 400
+    data = request.get_json()
+    selection_type = data.get('selection_type')
+    selected_date = data.get('selected_date')
 
-    date_obj = datetime.strptime(selected_date, '%Y-%m-%d')
+    # Parámetros para la API de KEXP
+    base_url = "https://api.kexp.org/v2/shows/"
+    limit = 50  # Default limit
     
-    # Establecer el rango de fechas y límite en función del tipo de selección
+    # Filtrar por límite según el tipo de selección
     if selection_type == 'day':
-        start_date = date_obj
-        end_date = start_date
         limit = 50
+        start_time_after = datetime.strptime(selected_date, '%Y-%m-%d')
+        end_time = start_time_after + timedelta(days=1)
     elif selection_type == 'week':
-        start_date = date_obj - timedelta(days=date_obj.weekday())
-        end_date = start_date + timedelta(days=6)
         limit = 150
+        start_time_after = datetime.strptime(selected_date, '%Y-%m-%d')
+        end_time = start_time_after + timedelta(days=7)
     elif selection_type == 'month':
-        start_date = date_obj.replace(day=1)
-        end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
         limit = 550
-    else:
-        return jsonify({"error": "Tipo de selección inválido."}), 400
-    
-    params = {
-        "expand": "hosts",
-        "limit": limit,
-        "start_time_after": start_date.isoformat() + "T00:00:00Z",
-        "start_time_before": end_date.isoformat() + "T23:59:59Z"
-    }
-    response = requests.get(KEXP_SHOWS_API_URL, params=params)
+        start_time_after = datetime.strptime(selected_date, '%Y-%m-%d')
+        year = start_time_after.year
+        month = start_time_after.month
+        # Calcular el final del mes
+        if month == 12:
+            end_time = datetime(year + 1, 1, 1)
+        else:
+            end_time = datetime(year, month + 1, 1)
 
-    if response.status_code == 200:
-        data = response.json()
-        return jsonify(data['results'])
-    else:
-        return jsonify({"error": "Error al obtener los programas de KEXP"}), 500
+    # Parámetros de la consulta a la API de KEXP
+    params = {
+        "start_time_after": start_time_after.isoformat(),
+        "limit": limit
+    }
+
+    # Log de la URL completa antes de realizar la llamada
+    request_url = f"{base_url}?start_time_after={params['start_time_after']}&limit={params['limit']}"
+    app.logger.info(f"Llamada a la API de KEXP: {request_url}")
+
+    # Realizar la solicitud a la API
+    response = requests.get(base_url, params=params)
+    shows_data = response.json().get('results', [])
+
+    # Filtrar los shows que estén dentro del rango solicitado
+    filtered_shows = [
+        show for show in shows_data
+        if start_time_after <= datetime.fromisoformat(show['start_time'][:-1]) < end_time
+    ]
+
+    return jsonify(filtered_shows)
 
 @app.route('/download_link/<show_id>', methods=['GET'])
 def get_download_link(show_id):
