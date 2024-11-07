@@ -15,11 +15,12 @@ def get_shows():
     data = request.get_json()
     selection_type = data.get('selection_type')
     selected_date = data.get('selected_date')
-
+    # Convertir a UTC+8
+    utc_plus_8 = timezone(timedelta(hours=-8))
     base_url = "https://api.kexp.org/v2/shows/"
     limit = 50
     
-    start_time_after = datetime.strptime(selected_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    start_time_after = datetime.strptime(selected_date, '%Y-%m-%d').replace(tzinfo=utc_plus_8)
     end_time = start_time_after
 
     if selection_type == 'day':
@@ -34,9 +35,9 @@ def get_shows():
         year = start_time_after.year
         month = start_time_after.month
         if month == 12:
-            end_time = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            end_time = datetime(year + 1, 1, 1, tzinfo=utc_plus_8)
         else:
-            end_time = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+            end_time = datetime(year, month + 1, 1, tzinfo=utc_plus_8)
 
     params = {
         "start_time_after": start_time_after.strftime('%Y-%m-%dT%H:%M:%S'),
@@ -48,7 +49,7 @@ def get_shows():
 
     response = requests.get(base_url, params=params)
     shows_data = response.json().get('results', [])
-    
+    app.logger.info(f"Llamada a la API de KEXP: {request_url}")
     filtered_shows = [
         {
             "id": show["id"],
@@ -60,7 +61,7 @@ def get_shows():
         }
 
         for show in shows_data        
-        if start_time_after <= parser.parse(show['start_time']).astimezone(timezone.utc) < end_time
+        if start_time_after <= parser.parse(show['start_time']).astimezone(utc_plus_8) < end_time
     ]
     app.logger.info(f"Shows filtrados {filtered_shows}")
     return jsonify(filtered_shows)
