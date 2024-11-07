@@ -1,202 +1,105 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Programas KEXP</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programas de KEXP</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/js/bootstrap-datepicker.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/css/bootstrap-datepicker.min.css">
 </head>
 <body>
-<div class="container mt-5">
-    <h1>Selecciona el Rango de Fechas</h1>
-    
-    <!-- Acordeón de selección -->
-    <div id="accordion">
-        <!-- Día -->
-        <div class="card">
-            <div class="card-header" id="headingDay">
-                <h2 class="mb-0">
-                    <button class="btn btn-link" data-toggle="collapse" data-target="#collapseDay" aria-expanded="true" aria-controls="collapseDay">
-                        Seleccionar Día
-                    </button>
-                </h2>
-            </div>
-            <div id="collapseDay" class="collapse show" aria-labelledby="headingDay" data-parent="#accordion">
-                <div class="card-body">
-                    <input type="text" id="day_picker" class="form-control" placeholder="Selecciona un día">
+    <div class="container mt-4">
+        <h2>Selecciona un intervalo de tiempo</h2>
+        
+        <div class="accordion" id="dateSelectorAccordion">
+            <div class="card">
+                <div class="card-header">
+                    <h5><button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseDay">Día</button></h5>
+                </div>
+                <div id="collapseDay" class="collapse show" data-parent="#dateSelectorAccordion">
+                    <div class="card-body">
+                        <input type="date" id="dayInput" class="form-control">
+                        <button class="btn btn-primary mt-2" onclick="fetchShows('day')">Buscar</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Semana -->
-        <div class="card">
-            <div class="card-header" id="headingWeek">
-                <h2 class="mb-0">
-                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseWeek" aria-expanded="false" aria-controls="collapseWeek">
-                        Seleccionar Semana
-                    </button>
-                </h2>
-            </div>
-            <div id="collapseWeek" class="collapse" aria-labelledby="headingWeek" data-parent="#accordion">
-                <div class="card-body">
-                    <select id="week_picker" class="form-control">
-                        <!-- Se llenará dinámicamente -->
-                    </select>
+            <div class="card">
+                <div class="card-header">
+                    <h5><button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseWeek">Semana</button></h5>
+                </div>
+                <div id="collapseWeek" class="collapse" data-parent="#dateSelectorAccordion">
+                    <div class="card-body">
+                        <select id="weekInput" class="form-control">
+                            <!-- Opciones de las últimas semanas generadas dinámicamente con JavaScript -->
+                        </select>
+                        <button class="btn btn-primary mt-2" onclick="fetchShows('week')">Buscar</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Mes -->
-        <div class="card">
-            <div class="card-header" id="headingMonth">
-                <h2 class="mb-0">
-                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#collapseMonth" aria-expanded="false" aria-controls="collapseMonth">
-                        Seleccionar Mes
-                    </button>
-                </h2>
-            </div>
-            <div id="collapseMonth" class="collapse" aria-labelledby="headingMonth" data-parent="#accordion">
-                <div class="card-body">
-                    <div class="form-row">
-                        <div class="col">
-                            <select id="month_picker" class="form-control">
-                                <!-- Lista de meses -->
-                                <option value="1">Enero</option>
-                                <option value="2">Febrero</option>
-                                <option value="3">Marzo</option>
-                                <option value="4">Abril</option>
-                                <option value="5">Mayo</option>
-                                <option value="6">Junio</option>
-                                <option value="7">Julio</option>
-                                <option value="8">Agosto</option>
-                                <option value="9">Septiembre</option>
-                                <option value="10">Octubre</option>
-                                <option value="11">Noviembre</option>
-                                <option value="12">Diciembre</option>
-                            </select>
-                        </div>
-                        <div class="col">
-                            <select id="year_picker" class="form-control">
-                                <!-- Se llenará dinámicamente -->
-                            </select>
-                        </div>
+            <div class="card">
+                <div class="card-header">
+                    <h5><button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseMonth">Mes</button></h5>
+                </div>
+                <div id="collapseMonth" class="collapse" data-parent="#dateSelectorAccordion">
+                    <div class="card-body">
+                        <select id="monthInput" class="form-control">
+                            <!-- Opciones de mes -->
+                        </select>
+                        <select id="yearInput" class="form-control mt-2">
+                            <!-- Opciones de año -->
+                        </select>
+                        <button class="btn btn-primary mt-2" onclick="fetchShows('month')">Buscar</button>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div id="showsContainer" class="row mt-4">
+            <!-- Las cards de los shows se generarán aquí -->
+        </div>
     </div>
 
-    <button id="fetch_shows" class="btn btn-primary mt-4">Mostrar Programas</button>
-    
-    <!-- Listado de programas -->
-    <div id="programs" class="mt-4 row"></div>
-</div>
-
-<script>
-    $(document).ready(function () {
-        // Inicializar el selector de día
-        $('#day_picker').datepicker({
-            format: "yyyy-mm-dd",
-            autoclose: true,
-            endDate: new Date()  // No permitir fechas futuras
-        });
-
-        // Generar opciones de año en el selector de mes
-        const currentYear = new Date().getFullYear();
-        const yearPicker = $('#year_picker');
-        for (let year = currentYear; year >= currentYear - 10; year--) {
-            yearPicker.append(`<option value="${year}">${year}</option>`);
-        }
-
-        // Generar las últimas 12 semanas para el selector de semanas
-        const weekPicker = $('#week_picker');
-        for (let i = 0; i < 12; i++) {
-            const startOfWeek = new Date();
-            startOfWeek.setDate(startOfWeek.getDate() - (startOfWeek.getDay() + 7 * i));
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(endOfWeek.getDate() + 6);
-
-            // Formato de visualización
-            const weekLabel = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')} a ${endOfWeek.getFullYear()}-${String(endOfWeek.getMonth() + 1).padStart(2, '0')}-${String(endOfWeek.getDate()).padStart(2, '0')}`;
-            const weekValue = startOfWeek.toISOString().split('T')[0];
-            weekPicker.append(`<option value="${weekValue}">${weekLabel}</option>`);
-        }
-
-        // Manejar clic en botón de "Mostrar Programas"
-        $('#fetch_shows').on('click', function () {
-            let selectionType, selectedDate;
-            if ($('#collapseDay').hasClass('show')) {
-                selectionType = 'day';
-                selectedDate = $('#day_picker').val();
-                if (!selectedDate) return alert("Por favor, selecciona un día.");
-            } else if ($('#collapseWeek').hasClass('show')) {
-                selectionType = 'week';
-                selectedDate = $('#week_picker').val();
-            } else if ($('#collapseMonth').hasClass('show')) {
-                selectionType = 'month';
-                const selectedMonth = $('#month_picker').val();
-                const selectedYear = $('#year_picker').val();
-                selectedDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+    <script>
+        function fetchShows(type) {
+            let selectedDate;
+            if (type === 'day') {
+                selectedDate = document.getElementById('dayInput').value;
+            } else if (type === 'week') {
+                selectedDate = document.getElementById('weekInput').value;
+            } else if (type === 'month') {
+                const month = document.getElementById('monthInput').value;
+                const year = document.getElementById('yearInput').value;
+                selectedDate = `${year}-${month}-01`;
             }
 
-            // Realizar solicitud a la API de Flask
             $.ajax({
                 url: '/get_shows',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({
-                    selection_type: selectionType,
-                    selected_date: selectedDate
-                }),
-                success: function (data) {
-                    $('#programs').empty();
+                data: JSON.stringify({ selection_type: type, selected_date: selectedDate }),
+                success: function(data) {
+                    $('#showsContainer').empty();
                     data.forEach(show => {
-                        const showCard = `
-                            <div class="col-md-2 mb-4">
+                        $('#showsContainer').append(`
+                            <div class="col-2 mb-3">
                                 <div class="card">
-                                    <img src="${show.hosts[0].image_uri}" class="card-img-top" style="height: 100px; object-fit: cover;">
+                                    <img src="${show.image_uri || 'placeholder.jpg'}" class="card-img-top" style="height: 100px;">
                                     <div class="card-body">
                                         <h5 class="card-title">${show.program_name}</h5>
-                                        <p class="card-text"><strong>Host:</strong> ${show.host_names[0]}</p>
-                                        <p class="card-text"><strong>Tags:</strong> ${show.program_tags || 'N/A'}</p>
-                                        <p class="card-text"><strong>Inicio:</strong> ${show.start_time}</p>
-                                        <a href="#" class="btn btn-primary download-btn" data-show-id="${show.id}">Descargar MP3</a>
+                                        <p class="card-text">Presentador: ${show.host_names.join(', ')}</p>
+                                        <p class="card-text">Fecha: ${show.start_time}</p>
+                                        <p class="card-text">Tags: ${show.program_tags}</p>
+                                        <a href="${show.download_url}" class="btn btn-primary" download>Descargar</a>
                                     </div>
                                 </div>
                             </div>
-                        `;
-                        $('#programs').append(showCard);
+                        `);
                     });
-                },
-                error: function () {
-                    alert("Error al obtener los programas.");
                 }
             });
-        });
-
-        // Manejar la descarga en el botón "Descargar MP3"
-        $(document).on('click', '.download-btn', function (e) {
-            e.preventDefault();
-            const showId = $(this).data('show-id');
-            
-            $.ajax({
-                url: `/download_link/${showId}`,
-                type: 'GET',
-                success: function (data) {
-                    if (data.download_url) {
-                        window.location.href = data.download_url;
-                    } else {
-                        alert("No se pudo obtener la URL de descarga.");
-                    }
-                },
-                error: function () {
-                    alert("Error al obtener la URL de descarga.");
-                }
-            });
-        });
-    });
-</script>
+        }
+    </script>
 </body>
 </html>
